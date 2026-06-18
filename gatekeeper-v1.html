@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gridkeeper — Substation Control</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/material-icons/4.0.0/iconfont/material-icons.min.css">
+<style>
+  :root{
+    --bg: #F7F5F1;
+    --bg-soft: #EFEBE3;
+    --panel: #1E2A38;
+    --panel-soft: #2A3A4D;
+    --panel-line: #3A4D63;
+    --ink: #1C1F22;
+    --ink-soft: #5B6066;
+    --paper: #FFFFFF;
+    --power: #E8A33D;
+    --power-dim: #F3D9A8;
+    --money: #3FA796;
+    --money-dim: #BFE6DF;
+    --parts: #7C8FAE;
+    --parts-dim: #D6DCE6;
+    --danger: #C75D4D;
+    --danger-dim: #F0CFC7;
+    --good: #4F9B6E;
+    --radius: 14px;
+    --radius-sm: 8px;
+    --shadow: 0 1px 2px rgba(28,31,34,0.04), 0 4px 16px rgba(28,31,34,0.06);
+    --shadow-lg: 0 8px 30px rgba(28,31,34,0.12);
+  }
+
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .app{
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 28px 20px 80px;
+  }
+
+  /* ---------- Header ---------- */
+  .topbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom: 22px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .brand{
+    display:flex;
+    align-items:center;
+    gap: 12px;
+  }
+  .brand-mark{
+    width: 38px; height: 38px;
+    border-radius: 10px;
+    background: var(--panel);
+    display:flex; align-items:center; justify-content:center;
+    color: var(--power);
+    font-size: 20px;
+    box-shadow: var(--shadow);
+  }
+  .brand h1{
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 19px;
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+  .brand p{
+    margin: 0;
+    font-size: 12px;
+    color: var(--ink-soft);
+    font-weight: 500;
+  }
+
+  .station-status{
+    display:flex;
+    align-items:center;
+    gap: 8px;
+    background: var(--paper);
+    border-radius: 999px;
+    padding: 7px 14px 7px 8px;
+    box-shadow: var(--shadow);
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .status-dot{
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    background: var(--good);
+    box-shadow: 0 0 0 3px rgba(79,155,110,0.18);
+  }
+  .station-status.warn .status-dot{ background: var(--power); box-shadow: 0 0 0 3px rgba(232,163,61,0.2);}
+  .station-status.crit .status-dot{ background: var(--danger); box-shadow: 0 0 0 3px rgba(199,93,77,0.2);}
+
+  /* ---------- Resource cards ---------- */
+  .resources{
+    display:grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+  .res-card{
+    background: var(--paper);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    box-shadow: var(--shadow);
+    position: relative;
+    overflow: hidden;
+  }
+  .res-card::before{
+    content:'';
+    position:absolute; top:0; left:0; right:0; height: 3px;
+  }
+  .res-card.power::before{ background: var(--power); }
+  .res-card.money::before{ background: var(--money); }
+  .res-card.parts::before{ background: var(--parts); }
+
+  .res-top{
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom: 6px;
+  }
+  .res-label{
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    display:flex; align-items:center; gap:6px;
+  }
+  .res-label .material-icons{ font-size: 16px; }
+  .res-card.power .res-label .material-icons{ color: var(--power); }
+  .res-card.money .res-label .material-icons{ color: var(--money); }
+  .res-card.parts .res-label .material-icons{ color: var(--parts); }
+
+  .res-value{
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 27px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .res-rate{
+    font-size: 12px;
+    color: var(--ink-soft);
+    font-weight: 500;
+    margin-top: 2px;
+  }
+  .res-rate b{ color: var(--ink); font-weight: 600; }
+
+  /* ---------- Grid strip (signature element) ---------- */
+  .grid-strip{
+    background: var(--panel);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    margin-bottom: 18px;
+    box-shadow: var(--shadow);
+    position: relative;
+  }
+  .grid-strip-head{
+    display:flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .grid-strip-head h2{
+    color: #fff;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 14px;
+    margin: 0;
+    font-weight: 600;
+    display:flex; align-items:center; gap:8px;
+  }
+  .grid-strip-head h2 .material-icons{ font-size:17px; color: var(--power); }
+  .grid-health-label{
+    font-size: 12px;
+    color: #AEB9C7;
+    font-weight: 500;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .wires{
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 7px;
+  }
+  .wire{
+    height: 34px;
+    border-radius: 6px;
+    background: var(--panel-soft);
+    border: 1px solid var(--panel-line);
+    position: relative;
+    cursor: default;
+    transition: background 0.25s, border-color 0.25s, transform 0.15s;
+    overflow: hidden;
+  }
+  .wire::after{
+    content:'';
+    position:absolute; inset:0;
+    background: linear-gradient(90deg, transparent, rgba(232,163,61,0.55), transparent);
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  .wire.live{ background: rgba(232,163,61,0.16); border-color: rgba(232,163,61,0.4); }
+  .wire.live::after{ animation: pulse-flow 2.2s linear infinite; opacity: 1; }
+  @keyframes pulse-flow{
+    0%{ transform: translateX(-100%); }
+    100%{ transform: translateX(100%); }
+  }
+  .wire.broken{
+    background: rgba(199,93,77,0.22);
+    border-color: var(--danger);
+    cursor: pointer;
+    animation: spark 0.5s ease-in-out infinite;
+  }
+  .wire.broken:hover{ transform: scale(1.05); }
+  @keyframes spark{
+    0%, 100%{ box-shadow: 0 0 0 0 rgba(199,93,77,0.5); }
+    50%{ box-shadow: 0 0 0 4px rgba(199,93,77,0.18); }
+  }
+  .wire.broken .material-icons{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    color: var(--danger); font-size: 18px;
+  }
+
+  /* ---------- Event banner ---------- */
+  .event-banner{
+    background: var(--paper);
+    border-left: 4px solid var(--danger);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    margin-bottom: 18px;
+    box-shadow: var(--shadow);
+    display: none;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .event-banner.show{ display:flex; animation: slide-in 0.3s ease; }
+  @keyframes slide-in{ from{ opacity:0; transform: translateY(-6px); } to{ opacity:1; transform:none; } }
+  .event-icon{
+    width: 38px; height:38px; border-radius: 50%;
+    background: var(--danger-dim);
+    color: var(--danger);
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0;
+  }
+  .event-body{ flex: 1; min-width: 200px; }
+  .event-title{ font-weight: 700; font-size: 14px; margin-bottom: 2px; }
+  .event-desc{ font-size: 13px; color: var(--ink-soft); }
+  .event-actions{ display:flex; gap:8px; flex-wrap: wrap; }
+
+  /* ---------- Reset / outage overlay ---------- */
+  .outage-overlay{
+    position: fixed; inset:0;
+    background: rgba(28,31,34,0.78);
+    display:none;
+    align-items:center; justify-content:center;
+    z-index: 100;
+    backdrop-filter: blur(2px);
+  }
+  .outage-overlay.show{ display:flex; }
+  .outage-card{
+    background: var(--panel);
+    border-radius: var(--radius);
+    padding: 32px 30px;
+    width: 360px;
+    text-align: center;
+    box-shadow: var(--shadow-lg);
+  }
+  .outage-card .material-icons{ font-size: 40px; color: var(--danger); margin-bottom: 10px; }
+  .outage-card h3{
+    color: #fff; font-family: 'Space Grotesk', sans-serif;
+    font-size: 18px; margin: 0 0 6px;
+  }
+  .outage-card p{ color:#AEB9C7; font-size: 13px; margin: 0 0 18px; line-height:1.5; }
+  .outage-timer{
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 32px; font-weight: 600; color: var(--power);
+    margin-bottom: 18px;
+  }
+  .outage-bar{
+    height: 6px; background: var(--panel-soft); border-radius: 4px; overflow:hidden; margin-bottom: 18px;
+  }
+  .outage-bar-fill{ height:100%; background: var(--power); width:0%; transition: width 0.2s linear; }
+  .btn-pay-skip{
+    width: 100%;
+  }
+
+  /* ---------- Buttons ---------- */
+  .btn{
+    border: none;
+    border-radius: 999px;
+    padding: 8px 16px;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display:inline-flex; align-items:center; gap:6px;
+    transition: transform 0.12s, opacity 0.12s, background 0.12s;
+  }
+  .btn:active{ transform: scale(0.96); }
+  .btn .material-icons{ font-size: 16px; }
+  .btn-primary{ background: var(--panel); color: #fff; }
+  .btn-primary:hover{ background: var(--panel-soft); }
+  .btn-danger{ background: var(--danger); color: #fff; }
+  .btn-danger:hover{ opacity: 0.88; }
+  .btn-ghost{ background: var(--bg-soft); color: var(--ink); }
+  .btn-ghost:hover{ background: #E3DED3; }
+  .btn:disabled{ opacity: 0.4; cursor: not-allowed; }
+
+  /* ---------- Sections / Upgrades ---------- */
+  .section-title{
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    margin: 26px 0 12px;
+    display:flex; align-items:center; gap:8px;
+  }
+  .section-title .material-icons{ font-size: 18px; color: var(--ink-soft); }
+
+  .tabs{
+    display:flex;
+    gap: 6px;
+    margin-bottom: 14px;
+    background: var(--bg-soft);
+    padding: 4px;
+    border-radius: 999px;
+    width: fit-content;
+  }
+  .tab{
+    border:none; background: transparent;
+    padding: 7px 16px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    transition: background 0.15s, color 0.15s;
+  }
+  .tab.active{ background: var(--panel); color: #fff; }
+
+  .upgrades-grid{
+    display:grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 12px;
+  }
+  .upgrade-card{
+    background: var(--paper);
+    border-radius: var(--radius);
+    padding: 16px;
+    box-shadow: var(--shadow);
+    display:flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .upg-head{ display:flex; align-items:flex-start; gap: 10px; }
+  .upg-icon{
+    width: 36px; height:36px; border-radius: 9px;
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0;
+  }
+  .upg-icon.power{ background: var(--power-dim); color:#9A6A1E; }
+  .upg-icon.money{ background: var(--money-dim); color:#1F6E61; }
+  .upg-icon.parts{ background: var(--parts-dim); color:#3F5275; }
+  .upg-icon.defense{ background: var(--danger-dim); color:#8E3F32; }
+  .upg-icon .material-icons{ font-size: 19px; }
+  .upg-name{ font-weight: 700; font-size: 14px; line-height:1.3; }
+  .upg-desc{ font-size: 12px; color: var(--ink-soft); line-height:1.4; margin-top:1px; }
+  .upg-level{
+    font-size: 11px; font-weight: 600; color: var(--ink-soft);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .upg-foot{
+    display:flex; align-items:center; justify-content:space-between;
+    margin-top: auto;
+  }
+  .upg-cost{
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    display:flex; align-items:center; gap:5px;
+  }
+  .upg-cost .material-icons{ font-size: 14px; }
+  .upg-cost.power-c{ color: #9A6A1E; }
+  .upg-cost.money-c{ color: #1F6E61; }
+  .upg-cost.parts-c{ color: #3F5275; }
+
+  /* ---------- Log ---------- */
+  .log-panel{
+    background: var(--paper);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 14px 16px;
+    max-height: 180px;
+    overflow-y: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+  }
+  .log-row{
+    padding: 5px 0;
+    border-bottom: 1px solid var(--bg-soft);
+    color: var(--ink-soft);
+    display:flex; gap:8px;
+  }
+  .log-row:last-child{ border-bottom: none; }
+  .log-row .t{ color: #B8B2A4; flex-shrink:0; }
+  .log-row.warn{ color: #9A6A1E; }
+  .log-row.crit{ color: var(--danger); }
+  .log-row.good{ color: var(--good); }
+
+  /* ---------- Toasts ---------- */
+  .toast-wrap{
+    position: fixed;
+    bottom: 18px; right: 18px;
+    display:flex; flex-direction:column; gap:8px;
+    z-index: 200;
+  }
+  .toast{
+    background: var(--panel);
+    color: #fff;
+    padding: 10px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: var(--shadow-lg);
+    display:flex; align-items:center; gap:8px;
+    animation: toast-in 0.25s ease, toast-out 0.4s ease 2.6s forwards;
+  }
+  .toast .material-icons{ font-size: 16px; color: var(--power); }
+  @keyframes toast-in{ from{ opacity:0; transform: translateX(20px);} to{opacity:1; transform:none;} }
+  @keyframes toast-out{ to{ opacity:0; transform: translateX(20px); } }
+
+  @media (max-width: 720px){
+    .resources{ grid-template-columns: 1fr; }
+    .wires{ grid-template-columns: repeat(5, 1fr); }
+    .res-value{ font-size: 23px; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark"><span class="material-icons">bolt</span></div>
+      <div>
+        <h1>Gridkeeper</h1>
+        <p>Substation Control — Unit 04</p>
+      </div>
+    </div>
+    <div class="station-status good" id="stationStatus">
+      <span class="status-dot"></span>
+      <span id="stationStatusText">Grid stable</span>
+    </div>
+  </div>
+
+  <div class="resources">
+    <div class="res-card power">
+      <div class="res-top">
+        <div class="res-label"><span class="material-icons">bolt</span>Power</div>
+      </div>
+      <div class="res-value" id="powerVal">0</div>
+      <div class="res-rate">+<b id="powerRate">0</b>/sec</div>
+    </div>
+    <div class="res-card money">
+      <div class="res-top">
+        <div class="res-label"><span class="material-icons">payments</span>Money</div>
+      </div>
+      <div class="res-value" id="moneyVal">0</div>
+      <div class="res-rate">+<b id="moneyRate">0</b>/sec</div>
+    </div>
+    <div class="res-card parts">
+      <div class="res-top">
+        <div class="res-label"><span class="material-icons">settings</span>Parts</div>
+      </div>
+      <div class="res-value" id="partsVal">0</div>
+      <div class="res-rate">+<b id="partsRate">0</b>/sec</div>
+    </div>
+  </div>
+
+  <div class="grid-strip">
+    <div class="grid-strip-head">
+      <h2><span class="material-icons">cable</span>Wire Grid</h2>
+      <div class="grid-health-label" id="gridHealthLabel">10/10 lines live</div>
+    </div>
+    <div class="wires" id="wiresContainer"></div>
+  </div>
+
+  <div class="event-banner" id="eventBanner">
+    <div class="event-icon"><span class="material-icons" id="eventIcon">warning</span></div>
+    <div class="event-body">
+      <div class="event-title" id="eventTitle">—</div>
+      <div class="event-desc" id="eventDesc">—</div>
+    </div>
+    <div class="event-actions" id="eventActions"></div>
+  </div>
+
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-tab="power">Power</button>
+    <button class="tab" data-tab="money">Money</button>
+    <button class="tab" data-tab="parts">Parts</button>
+    <button class="tab" data-tab="defense">Defense</button>
+  </div>
+
+  <div class="upgrades-grid" id="upgradesGrid"></div>
+
+  <div class="section-title"><span class="material-icons">receipt_long</span>Maintenance Log</div>
+  <div class="log-panel" id="logPanel"></div>
+
+</div>
+
+<div class="outage-overlay" id="outageOverlay">
+  <div class="outage-card">
+    <span class="material-icons" id="outageIcon">power_off</span>
+    <h3 id="outageTitle">Grid Down</h3>
+    <p id="outageDesc">A major fault has taken the substation offline. Systems are restarting.</p>
+    <div class="outage-timer" id="outageTimer">00:30</div>
+    <div class="outage-bar"><div class="outage-bar-fill" id="outageBarFill"></div></div>
+    <button class="btn btn-danger btn-pay-skip" id="outageSkipBtn">
+      <span class="material-icons">flash_on</span>
+      <span id="outageSkipLabel">Force restart — 50 Parts</span>
+    </button>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+/* ===================== STATE ===================== */
+
+const fmt = (n) => {
+  if (n >= 1e9) return (n/1e9).toFixed(2)+'B';
+  if (n >= 1e6) return (n/1e6).toFixed(2)+'M';
+  if (n >= 1e3) return (n/1e3).toFixed(1)+'K';
+  return Math.floor(n).toLocaleString();
+};
+
+const SAVE_KEY = 'gridkeeper_save_v1';
+
+let state = {
+  power: 0, money: 0, parts: 0,
+  powerRate: 1, moneyRate: 0, partsRate: 0,
+  wires: Array.from({length:10}, () => ({broken:false})),
+  upgrades: {}, // id -> level
+  outage: null, // {endsAt, totalMs, kind, skipCost}
+  log: [],
+  lastTick: Date.now(),
+  billDue: { amount: 0, dueAt: Date.now() + 90000 },
+};
+
+/* ===================== UPGRADE DEFINITIONS ===================== */
+// effect(level) returns the bonus added per level; cost(level) returns cost to buy NEXT level (i.e. level+1)
+
+const UPGRADES = [
+  // POWER
+  {
+    id:'turbine', cat:'power', name:'Backup Turbine', icon:'wind_power',
+    desc:'A second turbine spins up, adding raw generation.',
+    baseCost: 15, costRes:'power', costGrowth: 1.16,
+    effect: (lvl)=> lvl*0.6, appliesTo:'powerRate', max: 60
+  },
+  {
+    id:'coil', cat:'power', name:'Induction Coils', icon:'cable',
+    desc:'Better coils squeeze more out of every live wire.',
+    baseCost: 60, costRes:'money', costGrowth: 1.22,
+    effect: (lvl)=> lvl*0.9, appliesTo:'powerRate', max: 40
+  },
+  {
+    id:'capbank', cat:'power', name:'Capacitor Bank', icon:'battery_charging_full',
+    desc:'Stores surplus charge, smoothing out generation spikes into steady output.',
+    baseCost: 400, costRes:'parts', costGrowth: 1.3,
+    effect: (lvl)=> lvl*3.5, appliesTo:'powerRate', max: 25
+  },
+  {
+    id:'coreupg', cat:'power', name:'Reactor Core Upgrade', icon:'device_thermostat',
+    desc:'A rare, expensive overhaul that multiplies all power output.',
+    baseCost: 2200, costRes:'parts', costGrowth: 1.6,
+    effect: (lvl)=> lvl*0.15, appliesTo:'powerMult', max: 10
+  },
+
+  // MONEY
+  {
+    id:'metering', cat:'money', name:'Smart Metering', icon:'speed',
+    desc:'Sell surplus power back to the city grid automatically.',
+    baseCost: 25, costRes:'power', costGrowth: 1.15,
+    effect: (lvl)=> lvl*0.5, appliesTo:'moneyRate', max: 60
+  },
+  {
+    id:'contracts', cat:'money', name:'Industrial Contracts', icon:'handshake',
+    desc:'Long-term supply deals with nearby factories.',
+    baseCost: 150, costRes:'money', costGrowth: 1.25,
+    effect: (lvl)=> lvl*1.4, appliesTo:'moneyRate', max: 40
+  },
+  {
+    id:'gridexport', cat:'money', name:'Regional Grid Export', icon:'public',
+    desc:'Push excess capacity across the regional interconnect for a premium.',
+    baseCost: 900, costRes:'parts', costGrowth: 1.35,
+    effect: (lvl)=> lvl*4, appliesTo:'moneyRate', max: 25
+  },
+  {
+    id:'billing', cat:'money', name:'Automated Billing Office', icon:'request_quote',
+    desc:'Cuts overhead, multiplying all money income.',
+    baseCost: 3000, costRes:'money', costGrowth: 1.55,
+    effect: (lvl)=> lvl*0.15, appliesTo:'moneyMult', max: 10
+  },
+
+  // PARTS
+  {
+    id:'salvage', cat:'parts', name:'Salvage Crew', icon:'construction',
+    desc:'A small crew strips parts from decommissioned gear.',
+    baseCost: 35, costRes:'money', costGrowth: 1.18,
+    effect: (lvl)=> lvl*0.25, appliesTo:'partsRate', max: 50
+  },
+  {
+    id:'workshop', cat:'parts', name:'Fabrication Workshop', icon:'precision_manufacturing',
+    desc:'Machines parts on-site instead of buying them in.',
+    baseCost: 250, costRes:'power', costGrowth: 1.28,
+    effect: (lvl)=> lvl*0.7, appliesTo:'partsRate', max: 35
+  },
+  {
+    id:'supplyline', cat:'parts', name:'Supply Line Contract', icon:'local_shipping',
+    desc:'A standing order with a parts distributor, multiplying parts income.',
+    baseCost: 1500, costRes:'money', costGrowth: 1.45,
+    effect: (lvl)=> lvl*0.15, appliesTo:'partsMult', max: 10
+  },
+
+  // DEFENSE (reduces failure chance / outage severity, costs parts+money)
+  {
+    id:'insulation', cat:'defense', name:'Wire Insulation', icon:'shield',
+    desc:'Thicker insulation. Wires break less often.',
+    baseCost: 50, costRes:'parts', costGrowth: 1.3,
+    effect: (lvl)=> lvl*0.06, appliesTo:'breakResist', max: 12
+  },
+  {
+    id:'autorepair', cat:'defense', name:'Auto-Repair Drone', icon:'precision_manufacturing',
+    desc:'A small drone slowly fixes broken wires on its own.',
+    baseCost: 700, costRes:'parts', costGrowth: 1.4,
+    effect: (lvl)=> lvl*0.08, appliesTo:'autoRepairRate', max: 8
+  },
+  {
+    id:'surgeprotect', cat:'defense', name:'Surge Protectors', icon:'health_and_safety',
+    desc:'Shortens the length of any blackout you suffer.',
+    baseCost: 500, costRes:'money', costGrowth: 1.35,
+    effect: (lvl)=> lvl*0.07, appliesTo:'outageReduction', max: 10
+  },
+  {
+    id:'reserve', cat:'defense', name:'Cash Reserve Fund', icon:'savings',
+    desc:'Keeps money set aside so bills due hurt less.',
+    baseCost: 300, costRes:'money', costGrowth: 1.3,
+    effect: (lvl)=> lvl*0.08, appliesTo:'billReduction', max: 10
+  },
+];
+
+function getLevel(id){ return state.upgrades[id] || 0; }
+
+function getCost(upg){
+  const lvl = getLevel(upg.id);
+  return Math.ceil(upg.baseCost * Math.pow(upg.costGrowth, lvl));
+}
+
+function computeDerived(){
+  let powerRate = 1, moneyRate = 0, partsRate = 0;
+  let powerMult = 1, moneyMult = 1, partsMult = 1;
+  let breakResist = 0, autoRepairRate = 0, outageReduction = 0, billReduction = 0;
+
+  for (const upg of UPGRADES){
+    const lvl = getLevel(upg.id);
+    if (lvl <= 0) continue;
+    const val = upg.effect(lvl);
+    if (upg.appliesTo === 'powerRate') powerRate += val;
+    if (upg.appliesTo === 'moneyRate') moneyRate += val;
+    if (upg.appliesTo === 'partsRate') partsRate += val;
+    if (upg.appliesTo === 'powerMult') powerMult += val;
+    if (upg.appliesTo === 'moneyMult') moneyMult += val;
+    if (upg.appliesTo === 'partsMult') partsMult += val;
+    if (upg.appliesTo === 'breakResist') breakResist += val;
+    if (upg.appliesTo === 'autoRepairRate') autoRepairRate += val;
+    if (upg.appliesTo === 'outageReduction') outageReduction += val;
+    if (upg.appliesTo === 'billReduction') billReduction += val;
+  }
+
+  // live wire ratio affects effective output
+  const liveCount = state.wires.filter(w=>!w.broken).length;
+  const liveRatio = liveCount / state.wires.length;
+
+  state.powerRate = powerRate * powerMult * liveRatio;
+  state.moneyRate = moneyRate * moneyMult * liveRatio;
+  state.partsRate = partsRate * partsMult * liveRatio;
+  state._breakResist = Math.min(0.85, breakResist);
+  state._autoRepairRate = autoRepairRate; // wires per second probability
+  state._outageReduction = Math.min(0.75, outageReduction);
+  state._billReduction = Math.min(0.7, billReduction);
+}
+
+/* ===================== LOG / TOAST ===================== */
+
+function addLog(msg, level=''){
+  const time = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+  state.log.unshift({msg, level, time});
+  if (state.log.length > 60) state.log.pop();
+  renderLog();
+}
+
+function toast(msg, icon='bolt'){
+  const wrap = document.getElementById('toastWrap');
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.innerHTML = `<span class="material-icons">${icon}</span><span>${msg}</span>`;
+  wrap.appendChild(el);
+  setTimeout(()=> el.remove(), 3100);
+}
+
+function renderLog(){
+  const panel = document.getElementById('logPanel');
+  panel.innerHTML = state.log.map(l =>
+    `<div class="log-row ${l.level}"><span class="t">${l.time}</span><span>${l.msg}</span></div>`
+  ).join('') || `<div class="log-row"><span>No activity yet.</span></div>`;
+}
+
+/* ===================== WIRES / FAILURES ===================== */
+
+function renderWires(){
+  const c = document.getElementById('wiresContainer');
+  c.innerHTML = '';
+  state.wires.forEach((w, i) => {
+    const el = document.createElement('div');
+    el.className = 'wire ' + (w.broken ? 'broken' : 'live');
+    if (w.broken){
+      el.innerHTML = `<span class="material-icons">bolt</span>`;
+      el.title = 'Click to repair this wire';
+      el.onclick = () => repairWire(i);
+    }
+    c.appendChild(el);
+  });
+  const liveCount = state.wires.filter(w=>!w.broken).length;
+  document.getElementById('gridHealthLabel').textContent = `${liveCount}/${state.wires.length} lines live`;
+
+  const statusEl = document.getElementById('stationStatus');
+  const statusText = document.getElementById('stationStatusText');
+  statusEl.classList.remove('good','warn','crit');
+  if (liveCount === state.wires.length){
+    statusEl.classList.add('good'); statusText.textContent = 'Grid stable';
+  } else if (liveCount >= state.wires.length * 0.6){
+    statusEl.classList.add('warn'); statusText.textContent = 'Minor faults';
+  } else {
+    statusEl.classList.add('crit'); statusText.textContent = 'Grid degraded';
+  }
+}
+
+function repairWire(i){
+  if (!state.wires[i].broken) return;
+  state.wires[i].broken = false;
+  computeDerived();
+  renderWires();
+  renderResources();
+  addLog(`Wire ${i+1} repaired by hand.`, 'good');
+}
+
+function maybeBreakWire(){
+  if (state.outage) return; // no random breaks during an outage
+  const liveWires = state.wires.map((w,i)=>({w,i})).filter(x=>!x.w.broken);
+  if (liveWires.length <= 2) return; // never break the grid down to nothing via random chance
+  const resist = state._breakResist || 0;
+  const baseChance = 0.045; // per tick (per second)
+  const chance = baseChance * (1 - resist);
+  if (Math.random() < chance){
+    const pick = liveWires[Math.floor(Math.random()*liveWires.length)];
+    pick.w.broken = true;
+    addLog(`Wire ${pick.i+1} sparked and went down.`, 'warn');
+    renderWires();
+  }
+}
+
+function autoRepairTick(){
+  const rate = state._autoRepairRate || 0;
+  if (rate <= 0) return;
+  const broken = state.wires.map((w,i)=>({w,i})).filter(x=>x.w.broken);
+  if (broken.length === 0) return;
+  if (Math.random() < rate){
+    const pick = broken[Math.floor(Math.random()*broken.length)];
+    pick.w.broken = false;
+    addLog(`Auto-repair drone fixed wire ${pick.i+1}.`, 'good');
+    renderWires();
+  }
+}
+
+/* ===================== RANDOM EVENTS / OUTAGES ===================== */
+
+const EVENT_TYPES = [
+  {
+    kind:'surge', icon:'warning', title:'Power Surge Detected',
+    desc:'A surge is overloading three wires at once. Repair them quickly or risk a blackout.',
+    onTrigger(){
+      let broke = 0;
+      state.wires.forEach(w=>{ if(!w.broken && broke < 3 && Math.random()<0.7){ w.broken = true; broke++; } });
+      renderWires();
+    }
+  },
+  {
+    kind:'inspection', icon:'fact_check', title:'Safety Inspection',
+    desc:'Inspectors found an issue. Pay parts to patch it quietly, or risk a shutdown.',
+    skipCost: () => Math.ceil(40 * (1 + getTotalLevels()*0.05)),
+    skipRes: 'parts',
+    forcesOutage: true,
+    outageMs: 25000,
+  },
+  {
+    kind:'overload', icon:'local_fire_department', title:'Transformer Overload',
+    desc:'The main transformer is overheating. Act fast or it trips offline.',
+    forcesOutage: true,
+    outageMs: 35000,
+  }
+];
+
+function getTotalLevels(){
+  return Object.values(state.upgrades).reduce((a,b)=>a+b,0);
+}
+
+let activeEvent = null;
+let eventTimeout = null;
+
+function scheduleNextEvent(){
+  const delay = 25000 + Math.random()*35000; // 25-60s
+  eventTimeout = setTimeout(triggerRandomEvent, delay);
+}
+
+function triggerRandomEvent(){
+  if (state.outage || activeEvent) { scheduleNextEvent(); return; }
+  const ev = EVENT_TYPES[Math.floor(Math.random()*EVENT_TYPES.length)];
+  activeEvent = ev;
+  showEventBanner(ev);
+}
+
+function showEventBanner(ev){
+  const banner = document.getElementById('eventBanner');
+  document.getElementById('eventIcon').textContent = ev.icon;
+  document.getElementById('eventTitle').textContent = ev.title;
+  document.getElementById('eventDesc').textContent = ev.desc;
+  const actions = document.getElementById('eventActions');
+  actions.innerHTML = '';
+
+  if (ev.onTrigger) ev.onTrigger();
+
+  if (ev.forcesOutage){
+    const fixBtn = document.createElement('button');
+    fixBtn.className = 'btn btn-primary';
+    fixBtn.innerHTML = `<span class="material-icons">build</span>Patch it (${ev.skipCost ? ev.skipCost()+' '+ev.skipRes : 'Free'})`;
+    fixBtn.onclick = () => {
+      if (ev.skipCost){
+        const cost = ev.skipCost();
+        if (state[ev.skipRes] < cost){ toast(`Not enough ${ev.skipRes}!`, 'error'); return; }
+        state[ev.skipRes] -= cost;
+        renderResources();
+      }
+      dismissEvent();
+      addLog(`${ev.title} resolved before causing damage.`, 'good');
+    };
+    actions.appendChild(fixBtn);
+
+    const ignoreBtn = document.createElement('button');
+    ignoreBtn.className = 'btn btn-ghost';
+    ignoreBtn.textContent = 'Ignore';
+    ignoreBtn.onclick = () => {
+      dismissEvent();
+      startOutage(ev.kind, ev.outageMs, ev.title);
+    };
+    actions.appendChild(ignoreBtn);
+
+    // auto-resolve into outage after time if not handled
+    ev._timer = setTimeout(()=>{
+      if (activeEvent === ev){
+        dismissEvent();
+        startOutage(ev.kind, ev.outageMs, ev.title);
+      }
+    }, 12000);
+  } else {
+    const okBtn = document.createElement('button');
+    okBtn.className = 'btn btn-primary';
+    okBtn.innerHTML = `<span class="material-icons">check</span>Acknowledge`;
+    okBtn.onclick = () => dismissEvent();
+    actions.appendChild(okBtn);
+  }
+
+  banner.classList.add('show');
+}
+
+function dismissEvent(){
+  if (activeEvent && activeEvent._timer) clearTimeout(activeEvent._timer);
+  activeEvent = null;
+  document.getElementById('eventBanner').classList.remove('show');
+  scheduleNextEvent();
+}
+
+/* ===================== OUTAGE (RESET / WAIT) ===================== */
+
+function startOutage(kind, ms, title){
+  const reduction = state._outageReduction || 0;
+  const finalMs = Math.max(8000, ms * (1 - reduction));
+  state.outage = {
+    startedAt: Date.now(),
+    endsAt: Date.now() + finalMs,
+    totalMs: finalMs,
+    kind,
+    title,
+  };
+  addLog(`${title} caused a full shutdown. Grid offline.`, 'crit');
+  // breaking several wires for visual effect
+  state.wires.forEach(w => { if (Math.random() < 0.5) w.broken = true; });
+  renderWires();
+  showOutageOverlay();
+}
+
+function outageSkipCost(){
+  return Math.ceil(60 + getTotalLevels()*4);
+}
+
+function showOutageOverlay(){
+  const overlay = document.getElementById('outageOverlay');
+  document.getElementById('outageTitle').textContent = state.outage.title || 'Grid Down';
+  document.getElementById('outageDesc').textContent = 'The substation is offline. Wait for systems to restart, or spend parts to force a restart.';
+  document.getElementById('outageSkipLabel').textContent = `Force restart — ${outageSkipCost()} Parts`;
+  overlay.classList.add('show');
+}
+
+document.getElementById('outageSkipBtn').onclick = () => {
+  const cost = outageSkipCost();
+  if (state.parts < cost){ toast('Not enough parts to force restart!', 'error'); return; }
+  state.parts -= cost;
+  endOutage(true);
+};
+
+function endOutage(forced){
+  state.outage = null;
+  document.getElementById('outageOverlay').classList.remove('show');
+  // restore wires
+  state.wires.forEach(w => w.broken = false);
+  computeDerived();
+  renderWires();
+  renderResources();
+  addLog(forced ? 'Forced restart — grid back online.' : 'Power restored — grid back online.', 'good');
+  toast('Grid back online', 'bolt');
+}
+
+function outageTick(){
+  if (!state.outage) return;
+  const now = Date.now();
+  const remaining = state.outage.endsAt - now;
+  if (remaining <= 0){ endOutage(false); return; }
+  const pct = 1 - (remaining / state.outage.totalMs);
+  document.getElementById('outageBarFill').style.width = (pct*100).toFixed(1)+'%';
+  const s = Math.ceil(remaining/1000);
+  const mm = String(Math.floor(s/60)).padStart(2,'0');
+  const ss = String(s%60).padStart(2,'0');
+  document.getElementById('outageTimer').textContent = `${mm}:${ss}`;
+}
+
+/* ===================== BILLS DUE ===================== */
+
+function scheduleNextBill(){
+  const delay = 75000 + Math.random()*45000;
+  state.billDue.dueAt = Date.now() + delay;
+}
+
+function checkBill(){
+  if (Date.now() < state.billDue.dueAt) return;
+  const baseAmount = 120 + getTotalLevels()*8;
+  const reduction = state._billReduction || 0;
+  const amount = Math.ceil(baseAmount * (1 - reduction));
+
+  if (state.money >= amount){
+    state.money -= amount;
+    addLog(`Utility bill paid automatically: ${fmt(amount)} money.`, 'warn');
+    renderResources();
+  } else {
+    // can't pay -> forced outage, harsher
+    addLog(`Bill due (${fmt(amount)}) went unpaid — service suspended!`, 'crit');
+    startOutage('bill', 40000, 'Service Suspended — Bill Unpaid');
+  }
+  scheduleNextBill();
+}
+
+/* ===================== RENDER: RESOURCES & UPGRADES ===================== */
+
+function renderResources(){
+  document.getElementById('powerVal').textContent = fmt(state.power);
+  document.getElementById('moneyVal').textContent = fmt(state.money);
+  document.getElementById('partsVal').textContent = fmt(state.parts);
+  document.getElementById('powerRate').textContent = state.powerRate.toFixed(1);
+  document.getElementById('moneyRate').textContent = state.moneyRate.toFixed(1);
+  document.getElementById('partsRate').textContent = state.partsRate.toFixed(1);
+}
+
+let currentTab = 'power';
+
+function renderUpgrades(){
+  const grid = document.getElementById('upgradesGrid');
+  grid.innerHTML = '';
+  const list = UPGRADES.filter(u => u.cat === currentTab);
+  list.forEach(upg => {
+    const lvl = getLevel(upg.id);
+    const maxed = lvl >= upg.max;
+    const cost = getCost(upg);
+    const canAfford = state[upg.costRes] >= cost;
+
+    const card = document.createElement('div');
+    card.className = 'upgrade-card';
+    card.innerHTML = `
+      <div class="upg-head">
+        <div class="upg-icon ${upg.cat}"><span class="material-icons">${upg.icon}</span></div>
+        <div>
+          <div class="upg-name">${upg.name}</div>
+          <div class="upg-desc">${upg.desc}</div>
+        </div>
+      </div>
+      <div class="upg-level">LEVEL ${lvl} / ${upg.max}</div>
+      <div class="upg-foot">
+        ${maxed
+          ? `<span class="upg-cost" style="color:var(--good)"><span class="material-icons">check_circle</span>Maxed</span>`
+          : `<span class="upg-cost ${upg.costRes}-c"><span class="material-icons">${upg.costRes==='power'?'bolt':upg.costRes==='money'?'payments':'settings'}</span>${fmt(cost)}</span>`
+        }
+        <button class="btn ${maxed ? 'btn-ghost' : 'btn-primary'}" ${maxed||!canAfford ? 'disabled' : ''} data-upg="${upg.id}">
+          ${maxed ? 'Maxed' : 'Upgrade'}
+        </button>
+      </div>
+    `;
+    if (!maxed){
+      card.querySelector('button').onclick = () => buyUpgrade(upg);
+    }
+    grid.appendChild(card);
+  });
+}
+
+function buyUpgrade(upg){
+  const lvl = getLevel(upg.id);
+  if (lvl >= upg.max) return;
+  const cost = getCost(upg);
+  if (state[upg.costRes] < cost) return;
+  state[upg.costRes] -= cost;
+  state.upgrades[upg.id] = lvl + 1;
+  computeDerived();
+  renderResources();
+  renderUpgrades();
+  toast(`${upg.name} upgraded to level ${lvl+1}`, upg.icon);
+}
+
+document.getElementById('tabs').addEventListener('click', (e) => {
+  const btn = e.target.closest('.tab');
+  if (!btn) return;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  currentTab = btn.dataset.tab;
+  renderUpgrades();
+});
+
+/* ===================== GAME LOOP ===================== */
+
+function tick(){
+  const now = Date.now();
+  const dt = Math.min(2, (now - state.lastTick) / 1000); // seconds, capped
+  state.lastTick = now;
+
+  if (!state.outage){
+    state.power += state.powerRate * dt;
+    state.money += state.moneyRate * dt;
+    state.parts += state.partsRate * dt;
+  }
+
+  maybeBreakWire();
+  autoRepairTick();
+  outageTick();
+  checkBill();
+  renderResources();
+
+  saveGame();
+}
+
+/* ===================== SAVE / LOAD ===================== */
+
+function saveGame(){
+  const toSave = {
+    power: state.power, money: state.money, parts: state.parts,
+    wires: state.wires, upgrades: state.upgrades,
+    outage: state.outage, billDue: state.billDue,
+    lastTick: state.lastTick,
+  };
+  try{ localStorage.setItem(SAVE_KEY, JSON.stringify(toSave)); }catch(e){}
+}
+
+function loadGame(){
+  try{
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    Object.assign(state, data);
+    // catch up offline time partially (cap to avoid absurd jumps), but don't auto-resolve outages unfairly
+    if (state.outage){
+      // keep outage as-is; will resolve naturally on tick
+    }
+  }catch(e){}
+}
+
+/* ===================== INIT ===================== */
+
+function init(){
+  loadGame();
+  computeDerived();
+  renderWires();
+  renderResources();
+  renderUpgrades();
+  renderLog();
+
+  if (state.outage) showOutageOverlay();
+  if (state.log.length === 0) addLog('Substation Unit 04 brought online.', 'good');
+
+  scheduleNextEvent();
+  if (!state.billDue || !state.billDue.dueAt) scheduleNextBill();
+
+  setInterval(tick, 1000);
+}
+
+init();
+</script>
+</body>
+</html>
